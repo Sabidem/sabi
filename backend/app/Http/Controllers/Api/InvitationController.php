@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\InviteMail;
 use App\Models\Invitation;
+use App\Models\School;
 use App\Models\User;
 use App\Support\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -40,6 +43,15 @@ class InvitationController extends Controller
         ]);
 
         $acceptUrl = rtrim(config('app.frontend_url', ''), '/') . '/accept-invite?token=' . $invitation->token;
+
+        // Deliver the invite by email. Wrapped so a mail failure never blocks
+        // the invite being created (the link is also returned in the response).
+        try {
+            $schoolName = optional(School::find($invitation->school_id))->name;
+            Mail::to($invitation->email)->send(new InviteMail($invitation->email, $schoolName, $acceptUrl));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'invitation' => $invitation->only('id', 'email', 'role', 'expires_at'),

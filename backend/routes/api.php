@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\TransferController;
 use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Middleware\ResolveTenant;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/invitations/accept', [InvitationController::class, 'accept']);
+
+// Public OTP password reset (pre-auth, email-keyed). Rate-limited per IP.
+Route::post('/forgot-password', [PasswordResetController::class, 'requestOtp'])->middleware('throttle:6,1');
+Route::post('/verify-otp', [PasswordResetController::class, 'verifyOtp'])->middleware('throttle:6,1');
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:6,1');
 
 // ── Authenticated + tenant-scoped ───────────────────────────────────────────
 Route::middleware(['auth:sanctum', ResolveTenant::class])->group(function () {

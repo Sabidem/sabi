@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeMail;
 use App\Models\LoginHistory;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -43,6 +45,13 @@ class AuthController extends Controller
             'status' => 'active',
             'school_id' => $schoolId,
         ]);
+
+        // Warm welcome. Wrapped so a mail failure never blocks sign-up.
+        try {
+            Mail::to($user->email)->send(new WelcomeMail($user->name));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'token' => $user->createToken('api')->plainTextToken,
